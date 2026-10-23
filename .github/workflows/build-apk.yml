@@ -7,6 +7,13 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: build-apk-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build Web App & Android APK
@@ -16,14 +23,18 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: 22
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
 
       - name: Install Node Dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Build Web Application
         run: npm run build
@@ -39,25 +50,29 @@ jobs:
 
       - name: Install Android Platforms & Build Tools
         run: |
+          yes | sdkmanager --licenses > /dev/null || true
           sdkmanager --install "platforms;android-31" "platforms;android-35" "build-tools;35.0.0"
-
-      - name: Install aapt2 and packaging utilities
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y aapt python3 imagemagick
 
       - name: Prepare Assets & Build APK
         working-directory: ./android
+        env:
+          WEB_DIR: ../dist
         run: |
           chmod +x prepare-assets.sh build.sh pack_apk.py
-          export ANDROID_HOME=$ANDROID_HOME
-          export WEB_DIR="../dist"
+          rm -f ./*.apk ./*.apk.idsig
           ./prepare-assets.sh
           ./build.sh
+
+      - name: Show APK Info
+        working-directory: ./android
+        run: |
+          ls -lh ./*.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging ./*.apk | head -5
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: OjolTarget-Pro-Release-APK
-          path: android/*.apk
-          retention-days: 14
+          name: OjolTarget-Pro-APK
+          path: android/OjolTarget-Pro-*.apk
+          if-no-files-found: error
+          retention-days: 30
