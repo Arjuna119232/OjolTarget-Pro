@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: build-apk-${{ github.ref }}
@@ -83,3 +83,23 @@ jobs:
           path: android/OjolTarget-Pro-*.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Siapkan aset rilis
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          APK="$(ls android/OjolTarget-Pro-*.apk | head -1)"
+          cp "$APK" android/OjolTarget-Pro-latest.apk
+          VERSION="$(basename "$APK" .apk)"; VERSION="${VERSION#OjolTarget-Pro-}"
+          echo "APK_VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Publikasikan ke Release (unduh langsung tanpa login)
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-terbaru
+          name: OjolTarget Pro ${{ env.APK_VERSION }}
+          body: |
+            APK build otomatis dari commit ${{ github.sha }}.
+            Unduh: `OjolTarget-Pro-latest.apk`
+          files: android/OjolTarget-Pro-latest.apk
+          make_latest: true
