@@ -42,9 +42,17 @@ cp "$FONTS_DIR"/woff2/*.woff2 "$ASSETS/www/fonts/"
 # jadi path yang sama dicerminkan di bundle agar avatar & hero tetap tampil offline.
 SRC_IMAGES="${SRC_IMAGES:-$HERE/web-images}"
 if [ -d "$SRC_IMAGES" ] && [ -n "$(ls -A "$SRC_IMAGES" 2>/dev/null)" ]; then
+  # ImageMagick 7 = `magick`, ImageMagick 6 = `convert` (default on Ubuntu CI).
+  if command -v magick >/dev/null 2>&1; then
+    IM_CMD=(magick)
+  elif command -v convert >/dev/null 2>&1; then
+    IM_CMD=(convert)
+  else
+    echo "ImageMagick tidak ditemukan (magick/convert)"; exit 1
+  fi
   mkdir -p "$ASSETS/www/src/assets/images"
   for img in "$SRC_IMAGES"/*.jpg; do
-    magick "$img" -resize '1280x1280>' -strip -quality 85 \
+    "${IM_CMD[@]}" "$img" -resize '1280x1280>' -strip -quality 85 \
       "$ASSETS/www/src/assets/images/$(basename "$img")"
   done
 fi

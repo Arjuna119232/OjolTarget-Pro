@@ -16,11 +16,23 @@ MIN_SDK=24
 TARGET_SDK=35
 KS="$HERE/debug.keystore"
 OUT="$HERE/build"
-APK_NAME="OjolTarget-Pro-2.0.0.apk"
+VERSION_NAME="$(sed -n 's/.*android:versionName="\([^"]*\)".*/\1/p' AndroidManifest.xml | head -1)"
+APK_NAME="OjolTarget-Pro-${VERSION_NAME:-dev}.apk"
 
-# Google only ships x86-64 host binaries; this host is ARM64, so use the
-# native aapt2 from Debian and the JVM builds of d8/apksigner.
-AAPT2="$(command -v aapt2 || echo /usr/lib/android-sdk/build-tools/debian/aapt2)"
+# aapt2: prefer the Android build-tools binary (x86-64 hosts such as CI), then
+# the system one (Debian ships a native ARM64 build), then the Debian path.
+pick_aapt2() {
+  if [ -n "${AAPT2:-}" ] && [ -x "${AAPT2}" ]; then return; fi
+  if [ -x "$BT/aapt2" ] && "$BT/aapt2" version >/dev/null 2>&1; then
+    AAPT2="$BT/aapt2"; return
+  fi
+  if command -v aapt2 >/dev/null 2>&1 && aapt2 version >/dev/null 2>&1; then
+    AAPT2="$(command -v aapt2)"; return
+  fi
+  AAPT2=/usr/lib/android-sdk/build-tools/debian/aapt2
+}
+AAPT2=""
+pick_aapt2
 D8_JAR="$BT/lib/d8.jar"
 APKSIGNER_JAR="$BT/lib/apksigner.jar"
 
