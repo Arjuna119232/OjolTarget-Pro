@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tema dasar: dipakai semua versi Android -->
+    <style name="AppTheme.Base" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:colorBackground">@color/app_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
+    <!--
+      windowBackground dipakai sebagai splash native saat cold start, supaya
+      tidak ada layar putih sebelum WebView selesai memuat.
+    -->
+    <style name="AppTheme" parent="AppTheme.Base">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+    </style>
+</resources>

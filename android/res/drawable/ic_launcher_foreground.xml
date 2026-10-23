@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Outer target ring -->
+    <path
+        android:pathData="M24,54 a30,30 0 1,0 60,0 a30,30 0 1,0 -60,0"
+        android:strokeColor="#59FFFFFF"
+        android:strokeWidth="4"
+        android:fillColor="#00000000" />
+
+    <!-- Middle ring -->
+    <path
+        android:pathData="M33,54 a21,21 0 1,0 42,0 a21,21 0 1,0 -42,0"
+        android:strokeColor="#B3FFFFFF"
+        android:strokeWidth="4.5"
+        android:fillColor="#00000000" />
+
+    <!-- Speedometer needle -->
+    <path
+        android:pathData="M54,54 L72,36"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round" />
+
+    <!-- Hub -->
+    <path
+        android:pathData="M54,54 m-6.5,0 a6.5,6.5 0 1,0 13,0 a6.5,6.5 0 1,0 -13,0"
+        android:fillColor="#FFFFFFFF" />
+</vector>

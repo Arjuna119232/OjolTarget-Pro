@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="10dp"
+    android:background="@drawable/widget_bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/widget_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/app_name"
+            android:textColor="#FFFFFFFF"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+
+        <TextView
+            android:id="@+id/widget_platform"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#FF34D399"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="baseline"
+        android:layout_marginTop="2dp">
+
+        <TextView
+            android:id="@+id/widget_net"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Rp 0"
+            android:textColor="#FF34D399"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+
+        <TextView
+            android:id="@+id/widget_sub"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:textColor="#FF94A3B8"
+            android:textSize="10sp"
+            android:maxLines="1" />
+    </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/widget_progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:layout_marginTop="4dp"
+        android:max="100"
+        android:progress="0"
+        android:progressDrawable="@drawable/widget_progress" />
+
+    <!-- 3 Tombol Lapangan: Dapat, Jemput, Turunkan -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="6dp">
+
+        <TextView
+            android:id="@+id/widget_btn_dapat"
+            android:layout_width="0dp"
+            android:layout_height="34dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:gravity="center"
+            android:background="@drawable/widget_button_bg"
+            android:textColor="#FF04170A"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:text="1. Dapat" />
+
+        <TextView
+            android:id="@+id/widget_spot"
+            android:layout_width="0dp"
+            android:layout_height="34dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:gravity="center"
+            android:background="@drawable/widget_spot_bg"
+            android:textColor="#FF1C1300"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:text="2. Jemput" />
+
+        <TextView
+            android:id="@+id/widget_btn_turun"
+            android:layout_width="0dp"
+            android:layout_height="34dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:background="@drawable/widget_button_bg"
+            android:textColor="#FF04170A"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:text="3. Turun" />
+    </LinearLayout>
+
+    <!-- Tombol Kirim Cepat / Input Rp -->
+    <TextView
+        android:id="@+id/widget_add"
+        android:layout_width="match_parent"
+        android:layout_height="32dp"
+        android:layout_marginTop="5dp"
+        android:gravity="center"
+        android:background="@drawable/widget_button_bg"
+        android:textColor="#FF04170A"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:text="+ Kirim Orderan (Rp)" />
+
+</LinearLayout>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ memakai SplashScreen API bawaan sistem -->
+    <style name="AppTheme" parent="AppTheme.Base">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="android:windowSplashScreenBackground">@color/app_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/app_background</item>
+        <item name="android:windowSplashScreenAnimationDuration">280</item>
+    </style>
+</resources>
