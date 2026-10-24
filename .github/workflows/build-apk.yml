@@ -34,7 +34,7 @@ jobs:
           bun-version: latest
 
       - name: Install Node Dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
 
       - name: Build Web Application
         run: npm run build

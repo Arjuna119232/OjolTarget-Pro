@@ -1,294 +1,212 @@
 import {
-  STORAGE_KEYS,
-  DriverProfile,
-  ServiceRecord,
-  RepairLog,
-  ServiceSetting,
+  ActiveOrder,
+  LapisPeta,
   OrderRecord,
-  ActiveOrderState,
-  WidgetSnapshot,
-  UserSettings,
-  TimerOnBidState,
+  PLATFORMS,
+  Platform,
+  Settings,
   SpotData,
-  OnboardingData,
-  OJOL_SERVICE_INTERVALS,
-  DEFAULT_SERVICE_COSTS,
-} from '@/types';
+  STORAGE_KEYS,
+  Tema,
+} from '../types';
+import { formatJam, pad2 } from './format';
 
-const STORAGE_PREFIX = 'ojol_target_';
+/** Awalan lama dipertahankan agar data order & titik dari versi sebelumnya tetap terbaca. */
+const PREFIX = 'ojol_target_';
 
-export function getKey(key: string): string {
-  return `${STORAGE_PREFIX}${key}`;
-}
+const MAKS_ORDER = 20000;
+const MAKS_SPOT = 6000;
 
-export function loadJSON<T>(key: string, fallback: T): T {
-  if (typeof window === 'undefined') return fallback;
+function baca<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(getKey(key));
-    if (!raw) return fallback;
-    return JSON.parse(raw) as T;
+    const raw = localStorage.getItem(PREFIX + key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
     return fallback;
   }
 }
 
-export function saveJSON<T>(key: string, value: T): void {
-  if (typeof window === 'undefined') return;
+function tulis(key: string, value: unknown): void {
   try {
-    localStorage.setItem(getKey(key), JSON.stringify(value));
+    localStorage.setItem(PREFIX + key, JSON.stringify(value));
   } catch (e) {
-    console.error(`Gagal menyimpan ${key}:`, e);
+    console.error('Gagal menyimpan', key, e);
   }
 }
 
-export function removeJSON(key: string): void {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem(getKey(key));
+function hapus(key: string): void {
+  try {
+    localStorage.removeItem(PREFIX + key);
+  } catch {
+    /* abaikan */
+  }
 }
 
-// ----------------- DRIVER PROFILE -----------------
+const num = (v: unknown): v is number => typeof v === 'number' && isFinite(v);
 
-export function loadDriverProfile(): DriverProfile | null {
-  return loadJSON<DriverProfile | null>(STORAGE_KEYS.PROFILE, null);
+function platformValid(p: unknown): Platform {
+  return PLATFORMS.includes(p as Platform) ? (p as Platform) : 'Grab';
 }
 
-export function saveDriverProfile(profile: DriverProfile): void {
-  saveJSON(STORAGE_KEYS.PROFILE, profile);
-  // sync widget snapshot as well
-  syncWidgetSnapshotFromState();
+// ---------- Order ----------
+
+function bersihOrder(o: unknown): OrderRecord | null {
+  if (!o || typeof o !== 'object') return null;
+  const r = o as OrderRecord;
+  if (typeof r.id !== 'string' || !num(r.nominal) || !num(r.timestamp)) return null;
+  return { ...r, platform: platformValid(r.platform), createdAt: num(r.createdAt) ? r.createdAt : r.timestamp };
 }
-
-// ----------------- ONBOARDING -----------------
-
-export function loadOnboarding(): OnboardingData | null {
-  return loadJSON<OnboardingData | null>(STORAGE_KEYS.ONBOARDING, null);
-}
-
-export function saveOnboarding(data: OnboardingData): void {
-  saveJSON(STORAGE_KEYS.ONBOARDING, data);
-}
-
-// ----------------- SERVICE RECORDS -----------------
-
-export function loadServices(): ServiceRecord[] {
-  return loadJSON<ServiceRecord[]>(STORAGE_KEYS.SERVICES, []);
-}
-
-export function saveServices(services: ServiceRecord[]): void {
-  saveJSON(STORAGE_KEYS.SERVICES, services);
-  syncWidgetSnapshotFromState();
-}
-
-// ----------------- REPAIR LOGS (LOG RIWAYAT PERBAIKAN) -----------------
-
-export function loadRepairLogs(): RepairLog[] {
-  return loadJSON<RepairLog[]>(STORAGE_KEYS.REPAIRS, []);
-}
-
-export function saveRepairLogs(repairs: RepairLog[]): void {
-  saveJSON(STORAGE_KEYS.REPAIRS, repairs);
-}
-
-// ----------------- SERVICE SETTINGS -----------------
-
-export function loadServiceSettings(): ServiceSetting[] {
-  const defaults: ServiceSetting[] = (Object.keys(OJOL_SERVICE_INTERVALS) as import('@/types').ServiceType[]).map((t) => ({
-    type: t,
-    intervalKM: OJOL_SERVICE_INTERVALS[t],
-    aktif: true,
-    estimasiBiayaRataRata: DEFAULT_SERVICE_COSTS[t],
-  }));
-  return loadJSON<ServiceSetting[]>(STORAGE_KEYS.SERVICE_SETTINGS, defaults);
-}
-
-export function saveServiceSettings(settings: ServiceSetting[]): void {
-  saveJSON(STORAGE_KEYS.SERVICE_SETTINGS, settings);
-}
-
-// ----------------- ORDERS -----------------
 
 export function loadOrders(): OrderRecord[] {
-  return loadJSON<OrderRecord[]>(STORAGE_KEYS.ORDERS, []);
+  const arr = baca<unknown[]>(STORAGE_KEYS.ORDERS, []);
+  return Array.isArray(arr) ? arr.map(bersihOrder).filter((x): x is OrderRecord => !!x) : [];
 }
 
 export function saveOrders(orders: OrderRecord[]): void {
-  saveJSON(STORAGE_KEYS.ORDERS, orders);
-  syncWidgetSnapshotFromState();
+  tulis(STORAGE_KEYS.ORDERS, orders.slice(0, MAKS_ORDER));
 }
 
-// ----------------- ACTIVE ORDER STATE -----------------
+// ---------- Titik Maps Gacor ----------
 
-export function loadActiveOrder(): ActiveOrderState | null {
-  return loadJSON<ActiveOrderState | null>(STORAGE_KEYS.ACTIVE_ORDER, null);
+function bersihSpot(s: unknown): SpotData | null {
+  if (!s || typeof s !== 'object') return null;
+  const r = s as SpotData;
+  if (typeof r.id !== 'string' || !num(r.lat) || !num(r.lng) || !num(r.timestamp)) return null;
+  return {
+    ...r,
+    namaLokasi: r.namaLokasi || 'Titik lapangan',
+    wilayah: r.wilayah || 'Area Lapangan',
+    jamGacor: r.jamGacor || '',
+    isEstimasi: !!r.isEstimasi,
+  };
 }
 
-export function saveActiveOrder(active: ActiveOrderState | null): void {
-  if (active === null) {
-    removeJSON(STORAGE_KEYS.ACTIVE_ORDER);
-  } else {
-    saveJSON(STORAGE_KEYS.ACTIVE_ORDER, active);
-  }
-  syncWidgetSnapshotFromState();
+export function loadSpots(): SpotData[] {
+  const arr = baca<unknown[]>(STORAGE_KEYS.SPOT_DATA, []);
+  return Array.isArray(arr) ? arr.map(bersihSpot).filter((x): x is SpotData => !!x) : [];
 }
 
-// ----------------- USER SETTINGS -----------------
-
-export const DEFAULT_USER_SETTINGS: UserSettings = {
-  quickOrderNominal: 10200,
-  platform: 'Grab',
-  targetHarian: 250000,
-  daerahOperasional: 'Jakarta Selatan',
-  themeMode: 'dark',
-  adaptiveBatterySaver: true,
-  highContrastDay: false,
-  soundAlerts: true,
-  vibrationAlerts: true,
-  servisReminderThresholdKM: 250,
-  smartCacheEnabled: true,
-  offlineTilesEnabled: true,
-  autoSyncKMWithOrders: true,
-  complianceModeVerified: true,
-};
-
-export function loadUserSettings(): UserSettings {
-  return loadJSON<UserSettings>(STORAGE_KEYS.USER_SETTINGS, DEFAULT_USER_SETTINGS);
+export function saveSpots(spots: SpotData[]): void {
+  tulis(STORAGE_KEYS.SPOT_DATA, spots.slice(0, MAKS_SPOT));
 }
 
-export function saveUserSettings(settings: UserSettings): void {
-  saveJSON(STORAGE_KEYS.USER_SETTINGS, settings);
+// ---------- Order berjalan ----------
+
+export function loadActive(): ActiveOrder | null {
+  const a = baca<ActiveOrder | null>(STORAGE_KEYS.ACTIVE_ORDER, null);
+  if (!a || typeof a !== 'object' || typeof a.id !== 'string' || !num(a.waktuDapat)) return null;
+  if (a.phase !== 'menuju-jemput' && a.phase !== 'menuju-antar') return null;
+  return { ...a, platform: platformValid(a.platform) };
 }
 
-// ----------------- TIMER ON-BID -----------------
+export function saveActive(a: ActiveOrder | null): void {
+  if (a) tulis(STORAGE_KEYS.ACTIVE_ORDER, a);
+  else hapus(STORAGE_KEYS.ACTIVE_ORDER);
+}
 
-export function loadTimerOnBid(): TimerOnBidState {
-  return loadJSON<TimerOnBidState>(STORAGE_KEYS.TIMER_ONBID, {
-    isRunning: false,
-    isPaused: false,
-    startTime: null,
-    elapsedSeconds: 0,
-    totalSeconds: 0,
-    targetJam: 250,
+// ---------- Setelan ----------
+
+export const DEFAULT_SETTINGS: Settings = { nama: '', platform: 'Grab', tema: 'gelap', peta: 'gelap' };
+
+export function loadSettings(): Settings {
+  const s = baca<Partial<Settings> | null>(STORAGE_KEYS.SETTINGS, null);
+  if (s && typeof s === 'object') return normalSettings(s);
+
+  // Migrasi dari versi lama (profil + setelan v3).
+  const lama = baca<{ platform?: unknown } | null>(STORAGE_KEYS.OLD_SETTINGS, null);
+  const profil = baca<{ nama?: unknown; primaryPlatform?: unknown } | null>(STORAGE_KEYS.OLD_PROFILE, null);
+  return normalSettings({
+    nama: typeof profil?.nama === 'string' ? profil.nama : '',
+    platform: platformValid(profil?.primaryPlatform ?? lama?.platform),
   });
 }
 
-export function saveTimerOnBid(state: TimerOnBidState): void {
-  saveJSON(STORAGE_KEYS.TIMER_ONBID, state);
-}
-
-// ----------------- SPOT DATA -----------------
-
-export function loadSpotData(): SpotData[] {
-  return loadJSON<SpotData[]>(STORAGE_KEYS.SPOT_DATA, []);
-}
-
-export function saveSpotData(spots: SpotData[]): void {
-  saveJSON(STORAGE_KEYS.SPOT_DATA, spots);
-}
-
-// ----------------- WIDGET SNAPSHOT -----------------
-
-export function loadWidgetSnapshot(): WidgetSnapshot | null {
-  return loadJSON<WidgetSnapshot | null>(STORAGE_KEYS.WIDGET_SNAPSHOT, null);
-}
-
-export function saveWidgetSnapshot(snap: WidgetSnapshot): void {
-  saveJSON(STORAGE_KEYS.WIDGET_SNAPSHOT, snap);
-
-  // Sync to Native Android if running inside WebView
-  if (typeof window !== 'undefined' && (window as any).OjolNative?.updateWidget) {
-    try {
-      (window as any).OjolNative.updateWidget(JSON.stringify(snap));
-    } catch (e) {
-      console.warn('Native widget update failed:', e);
-    }
-  }
-}
-
-/**
- * Otomatis menyinkronkan data snapshot widget dari state tersimpan saat ini
- */
-export function syncWidgetSnapshotFromState(): WidgetSnapshot {
-  const profile = loadDriverProfile();
-  const settings = loadUserSettings();
-  const orders = loadOrders();
-  const services = loadServices();
-  const activeOrder = loadActiveOrder();
-
-  // Hitung pendapatan bersih hari ini
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const startOfDay = today.getTime();
-
-  const todayOrders = orders.filter((o) => o.timestamp >= startOfDay);
-  const todayNet = todayOrders.reduce((sum, o) => sum + (o.nominal || 0), 0);
-  const target = settings.targetHarian || 250000;
-  const trips = todayOrders.length;
-  const remaining = Math.max(0, target - todayNet);
-  const progressPct = target > 0 ? Math.min(100, Math.round((todayNet / target) * 100)) : 0;
-
-  // Servis terdekat
-  const currentKM = profile?.currentKM || 0;
-  let minSisa = Infinity;
-  let nextServiceType = 'Oli Mesin';
-
-  for (const s of services) {
-    const sisa = s.targetKM - currentKM;
-    if (sisa < minSisa) {
-      minSisa = sisa;
-      nextServiceType = s.type;
-    }
-  }
-
-  const snapshot: WidgetSnapshot = {
-    todayNet,
-    target,
-    platform: profile?.primaryPlatform || settings.platform || 'Grab',
-    platformName: profile?.nama || 'Mitra Ojol',
-    quickAmount: settings.quickOrderNominal || 10200,
-    trips,
-    remaining,
-    progressPct,
-    activeStatus: activeOrder ? `${activeOrder.status} (${activeOrder.platform})` : 'Standby / On-Bid',
-    currentKM,
-    nextServiceKmRemaining: minSisa === Infinity ? 2000 : minSisa,
-    nextServiceType,
+function normalSettings(s: Partial<Settings>): Settings {
+  const tema: Tema = s.tema === 'terang' || s.tema === 'sistem' ? s.tema : 'gelap';
+  const peta: LapisPeta = s.peta === 'standar' ? 'standar' : 'gelap';
+  return {
+    nama: typeof s.nama === 'string' ? s.nama.slice(0, 40) : '',
+    platform: platformValid(s.platform),
+    tema,
+    peta,
   };
-
-  saveWidgetSnapshot(snapshot);
-  return snapshot;
 }
 
-// ----------------- BACKUP & RESTORE -----------------
-
-export function exportAllDataJSON(): string {
-  const bundle = {
-    profile: loadDriverProfile(),
-    settings: loadUserSettings(),
-    services: loadServices(),
-    repairs: loadRepairLogs(),
-    orders: loadOrders(),
-    spots: loadSpotData(),
-    timer: loadTimerOnBid(),
-    exportedAt: new Date().toISOString(),
-    version: '2.0.0',
-  };
-  return JSON.stringify(bundle, null, 2);
+export function saveSettings(s: Settings): void {
+  tulis(STORAGE_KEYS.SETTINGS, s);
 }
 
-export function importAllDataJSON(jsonStr: string): boolean {
+// ---------- Cadangan ----------
+
+export interface ImporHasil {
+  orders: OrderRecord[];
+  spots: SpotData[];
+  settings?: Settings;
+}
+
+export function exportJSON(settings: Settings, orders: OrderRecord[], spots: SpotData[]): string {
+  return JSON.stringify(
+    { app: 'OjolTarget Pro', version: 3, exportedAt: new Date().toISOString(), settings, orders, spots },
+    null,
+    2
+  );
+}
+
+/** Menerima cadangan baru maupun cadangan versi 2.0.0 (orders/spots/settings). */
+export function parseImport(teks: string): ImporHasil | null {
   try {
-    const bundle = JSON.parse(jsonStr);
-    if (bundle.profile) saveDriverProfile(bundle.profile);
-    if (bundle.settings) saveUserSettings(bundle.settings);
-    if (Array.isArray(bundle.services)) saveServices(bundle.services);
-    if (Array.isArray(bundle.repairs)) saveRepairLogs(bundle.repairs);
-    if (Array.isArray(bundle.orders)) saveOrders(bundle.orders);
-    if (Array.isArray(bundle.spots)) saveSpotData(bundle.spots);
-    if (bundle.timer) saveTimerOnBid(bundle.timer);
-    syncWidgetSnapshotFromState();
-    return true;
-  } catch (err) {
-    console.error('Import failed:', err);
-    return false;
+    const b = JSON.parse(teks);
+    if (!b || typeof b !== 'object') return null;
+    const orders = Array.isArray(b.orders) ? b.orders.map(bersihOrder).filter((x: unknown): x is OrderRecord => !!x) : [];
+    const spots = Array.isArray(b.spots) ? b.spots.map(bersihSpot).filter((x: unknown): x is SpotData => !!x) : [];
+    if (!orders.length && !spots.length) return null;
+    return { orders, spots };
+  } catch {
+    return null;
   }
+}
+
+// ---------- CSV ----------
+
+function sel(v: unknown): string {
+  const t = v === undefined || v === null ? '' : String(v);
+  return /[",\n;]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+}
+
+export function ordersToCSV(orders: OrderRecord[]): string {
+  const kepala = [
+    'Tanggal',
+    'Jam',
+    'Platform',
+    'Pendapatan (Rp)',
+    'KM ke jemput',
+    'KM jemput-antar',
+    'Total KM',
+    'Titik dapat order',
+    'Titik jemput',
+    'Titik antar',
+    'Catatan',
+  ];
+  const baris = [...orders]
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .map((o) => {
+      const d = new Date(o.timestamp);
+      const tgl = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+      return [
+        tgl,
+        formatJam(o.timestamp),
+        o.platform,
+        o.nominal,
+        o.kmKeJemput ?? '',
+        o.kmKeAntar ?? '',
+        o.kmTotalTrip ?? '',
+        o.titikDapatNama ?? '',
+        o.titikJemputNama ?? o.namaLokasi ?? '',
+        o.titikAntarNama ?? '',
+        o.catatan ?? '',
+      ]
+        .map(sel)
+        .join(',');
+    });
+  return '﻿' + [kepala.map(sel).join(','), ...baris].join('\r\n');
 }

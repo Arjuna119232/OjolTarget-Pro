@@ -1,6 +1,0 @@
-{
-  "name": "OjolTarget Pro - Asisten Driver & Perawatan Armada",
-  "description": "Aplikasi profesional mitra pengemudi ojol (Gojek, Grab, Shopee, Maxim, inDriver) dengan navigasi titik jemput/antar, widget status real-time, sinkronisasi KM servis akurat, estimasi biaya bengkel, dan mode hemat daya adaptif.",
-  "requestFramePermissions": ["geolocation"],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

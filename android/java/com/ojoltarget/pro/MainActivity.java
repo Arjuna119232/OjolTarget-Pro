@@ -48,7 +48,7 @@ import java.io.OutputStream;
 
 public class MainActivity extends Activity {
 
-    private static final int BACKGROUND = 0xFF090D16;
+    private static final int BACKGROUND = 0xFF0A0F1D;
     private static final int REQ_NOTIFICATIONS = 4101;
     private static final int REQ_STORAGE = 4102;
     private static final int REQ_LOCATION = 4104;
@@ -193,6 +193,7 @@ public class MainActivity extends Activity {
         android.widget.FrameLayout root = new android.widget.FrameLayout(this);
         root.setBackgroundColor(BACKGROUND);
         root.addView(webView);
+        rootView = root;
         applyInsets(root);
 
         setContentView(root);
@@ -204,13 +205,6 @@ public class MainActivity extends Activity {
         } else {
             webView.loadUrl(origin + "/");
         }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        // Impor order yang dicatat lewat widget saat aplikasi tertutup.
-        evalJs("window.__ojolWidgetSync && window.__ojolWidgetSync()");
     }
 
     private void createNotificationChannel() {
@@ -242,6 +236,35 @@ public class MainActivity extends Activity {
             } catch (Exception ignored) {
             }
         });
+    }
+
+    private android.widget.FrameLayout rootView;
+
+    /** Warna area bar sistem + ikon status bar mengikuti tema aplikasi (gelap/terang). */
+    private void applyChrome(int color, boolean lightBars) {
+        if (rootView != null) {
+            rootView.setBackgroundColor(color);
+        }
+        if (webView != null) {
+            webView.setBackgroundColor(color);
+        }
+        View decor = getWindow().getDecorView();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            android.view.WindowInsetsController c = decor.getWindowInsetsController();
+            if (c != null) {
+                int mask = android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                        | android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+                c.setSystemBarsAppearance(lightBars ? mask : 0, mask);
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            int flags = decor.getSystemUiVisibility();
+            if (lightBars) {
+                flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            } else {
+                flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            }
+            decor.setSystemUiVisibility(flags);
+        }
     }
 
     private void applyInsets(View target) {
@@ -301,7 +324,7 @@ public class MainActivity extends Activity {
             }
             if (!granted && REQ_LOCATION == requestCode) {
                 Toast.makeText(this,
-                        "Izin lokasi ditolak. Fitur Spot Gacor membutuhkan GPS.",
+                        "Izin lokasi ditolak. Hitung jarak dan Maps Gacor membutuhkan GPS.",
                         Toast.LENGTH_LONG).show();
             }
             evalJs("window.__ojolPermsChanged && window.__ojolPermsChanged();");
@@ -550,37 +573,15 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public void updateWidget(String json) {
+        public void setChrome(String bgHex, String lightBars) {
+            final boolean light = "true".equalsIgnoreCase(lightBars);
+            final int color;
             try {
-                synchronized (WidgetProvider.LOCK) {
-                    getSharedPreferences(WidgetProvider.PREFS, MODE_PRIVATE).edit()
-                            .putString(WidgetProvider.KEY_SNAPSHOT, json).apply();
-                }
-                WidgetProvider.refreshAll(getApplicationContext());
-            } catch (Exception ignored) {
+                color = Color.parseColor(bgHex);
+            } catch (Exception e) {
+                return;
             }
-        }
-
-        @JavascriptInterface
-        public String consumePendingOrders() {
-            synchronized (WidgetProvider.LOCK) {
-                android.content.SharedPreferences sp =
-                        getSharedPreferences(WidgetProvider.PREFS, MODE_PRIVATE);
-                String raw = sp.getString(WidgetProvider.KEY_PENDING, "[]");
-                sp.edit().remove(WidgetProvider.KEY_PENDING).apply();
-                return raw;
-            }
-        }
-
-        @JavascriptInterface
-        public String consumePendingSpots() {
-            synchronized (WidgetProvider.LOCK) {
-                android.content.SharedPreferences sp =
-                        getSharedPreferences(WidgetProvider.PREFS, MODE_PRIVATE);
-                String raw = sp.getString(WidgetProvider.KEY_PENDING_SPOTS, "[]");
-                sp.edit().remove(WidgetProvider.KEY_PENDING_SPOTS).apply();
-                return raw;
-            }
+            runOnUiThread(() -> applyChrome(color, light));
         }
 
         @JavascriptInterface

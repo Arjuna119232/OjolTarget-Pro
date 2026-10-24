@@ -70,7 +70,7 @@ if '/fonts/fonts.css' not in html:
     html = html.replace(
         '</head>',
         '  <link rel="stylesheet" href="/fonts/fonts.css">\n'
-        '  <style>html,body{background-color:#090d16;}</style>\n'
+        '  <style>html,body{background-color:#0a0f1d;}</style>\n'
         '</head>'
     )
 

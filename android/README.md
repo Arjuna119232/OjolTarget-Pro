@@ -13,7 +13,6 @@ Membungkus web app (`../`) menjadi APK tanpa Gradle: `aapt2` + `javac` + `d8` +
 | `java/com/ojoltarget/pro/AssetServer.java` | Server aset lokal (loopback) |
 | `res/` | Ikon adaptif, tema, splash, ikon notifikasi, network security config |
 | `fonts/` | Plus Jakarta Sans + JetBrains Mono (offline) |
-| `web-images/` | Foto avatar & hero cockpit |
 | `prepare-assets.sh` | Menyusun `assets/www` dari `../dist` + font + gambar |
 | `build.sh` | Build + tanda tangan APK |
 | `pack_apk.py` | Packer + alignment 4-byte (pengganti `zipalign`) |
@@ -45,7 +44,7 @@ ditandatangani dengan kunci terpisah; build lokal tidak bisa menimpanya.
 
 ## Spesifikasi
 
-- Package `com.ojoltarget.pro`, label OjolTarget Pro
+- Package `com.ojoltarget.pro` (v2.1.0, tanpa widget), label OjolTarget Pro
 - minSdk 24, targetSdk 35
 - Izin: `INTERNET`, `ACCESS_NETWORK_STATE`, `POST_NOTIFICATIONS`, `VIBRATE`,
   `WAKE_LOCK`, `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`,
