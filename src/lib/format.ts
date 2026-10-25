@@ -84,3 +84,20 @@ export function uid(): string {
   }
   return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
 }
+
+/** Pendapatan order + hasil tambahan. */
+export function totalOrder(o: { nominal: number; tambahan?: number }): number {
+  return (o.nominal || 0) + (o.tambahan || 0);
+}
+
+/** "Minggu, 25 Okt 2026" dari jam perangkat. */
+export function formatHariTanggal(ts: number): string {
+  const d = new Date(ts);
+  return `${HARI[d.getDay()]}, ${d.getDate()} ${BULAN[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/** Kunci hari lokal (yyyy-mm-dd) menurut zona waktu perangkat. */
+export function kunciHari(ts: number = Date.now()): string {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}

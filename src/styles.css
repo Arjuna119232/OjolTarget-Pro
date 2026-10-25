@@ -1289,3 +1289,526 @@ p {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ---------- Jam & target ---------- */
+
+.clock {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.clock strong {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.clock small {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.brand h1 {
+  font-size: 18px;
+}
+
+.target {
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.target-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.target-head small {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.target-head strong {
+  font-size: 22px;
+  color: var(--green);
+}
+
+.bar {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+  transition: width 0.4s ease;
+}
+
+/* ---------- Form tambahan ---------- */
+
+.input-readonly {
+  display: flex;
+  align-items: center;
+  background: transparent;
+  border-style: dashed;
+  color: var(--text);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.input-money-sm {
+  min-height: 50px;
+  font-size: 20px;
+  padding-left: 46px;
+  color: var(--text);
+}
+
+.total-row-strong {
+  background: rgba(34, 197, 94, 0.14);
+  border: 1px solid rgba(34, 197, 94, 0.45);
+}
+
+.total-row-strong strong {
+  color: var(--green);
+}
+
+.notice-error {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.btn-lg {
+  min-height: 56px;
+  font-size: 16px;
+}
+
+.akun-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---------- Splash ---------- */
+
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  padding: 24px;
+  background: radial-gradient(120% 80% at 50% 30%, #0f2a22 0%, #0a0f1d 60%);
+  color: #eef2ff;
+  text-align: center;
+}
+
+.splash-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  animation: splash-in 0.7s ease both;
+}
+
+.splash-mark {
+  width: 96px;
+  height: 96px;
+  border-radius: 28px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #22c55e, #0ea5a4);
+  color: #04210f;
+  box-shadow: 0 18px 50px rgba(34, 197, 94, 0.35);
+  margin-bottom: 10px;
+}
+
+.splash h1 {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.splash p {
+  color: #98a3c4;
+  font-size: 15px;
+}
+
+.splash-bar {
+  width: min(240px, 60vw);
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.splash-bar span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: left;
+  background: #22c55e;
+  animation-name: splash-fill;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+
+@keyframes splash-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes splash-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+}
+
+/* ---------- Halaman penuh: onboarding & daftar ---------- */
+
+.fullpage {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--bg);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.fullpage > * {
+  width: 100%;
+  max-width: 520px;
+}
+
+.intro {
+  justify-content: space-between;
+  padding: 14px 20px 20px;
+}
+
+.intro-top {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 40px;
+}
+
+.intro-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 16px;
+  padding: 12px 6px;
+  animation: slide-in 0.3s ease both;
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+
+.intro-art {
+  width: 130px;
+  height: 130px;
+  border-radius: 38px;
+  display: grid;
+  place-items: center;
+  background: rgba(34, 197, 94, 0.14);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: var(--green);
+}
+
+.intro-body h2 {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.intro-body p {
+  color: var(--muted);
+  font-size: 16px;
+  max-width: 34ch;
+  line-height: 1.5;
+}
+
+.intro-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: all 0.2s ease;
+}
+
+.dots span.on {
+  width: 26px;
+  background: var(--green);
+}
+
+.daftar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 28px 20px 40px;
+}
+
+.daftar h2 {
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.brand-mark-lg {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+}
+
+/* ---------- Pop up izin ---------- */
+
+.center-backdrop {
+  align-items: center;
+  padding: 16px;
+}
+
+.dialog {
+  width: 100%;
+  max-width: 440px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 16px 16px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  animation: rise 0.22s ease;
+}
+
+.dialog-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+}
+
+.dialog-head h2 {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.dialog-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: rgba(34, 197, 94, 0.16);
+  color: var(--green);
+}
+
+.dialog-foot {
+  display: flex;
+  gap: 8px;
+}
+
+.izin-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.izin-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+}
+
+.izin-list li.ok {
+  border-color: rgba(34, 197, 94, 0.45);
+}
+
+.izin-icon {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  color: var(--amber);
+}
+
+.izin-list li.ok .izin-icon {
+  background: var(--green);
+  color: #04210f;
+}
+
+.izin-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.izin-text strong {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.izin-text em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 1px 7px;
+  margin-left: 4px;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.18);
+  color: var(--red);
+  vertical-align: 1px;
+}
+
+.izin-text span {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.izin-ringkas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.izin-ringkas li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--amber);
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.izin-ringkas li.ok {
+  color: var(--green);
+}
+
+.izin-ringkas li span {
+  flex: 1;
+  color: var(--text);
+}
+
+.izin-ringkas small {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* ---------- Kartu akun ---------- */
+
+.akun-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  text-align: left;
+}
+
+.akun-avatar {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #22c55e, #0ea5a4);
+  color: #04210f;
+}
+
+.akun-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.akun-info strong {
+  font-size: 17px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.akun-info small {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.akun-go {
+  flex: none;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.16);
+  color: var(--green);
+  font-weight: 800;
+  font-size: 14px;
+}

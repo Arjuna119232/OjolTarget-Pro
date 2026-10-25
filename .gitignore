@@ -2,6 +2,11 @@ node_modules/
 build/
 dist/
 coverage/
+# Hasil build Android (dibuat ulang oleh prepare-assets.sh / CI)
+android/assets/
+android/web-dist/
+*.apk
+*.apk.idsig
 .DS_Store
 *.log
 .env*

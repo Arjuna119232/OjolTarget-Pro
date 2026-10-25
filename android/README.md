@@ -11,6 +11,7 @@ Membungkus web app (`../`) menjadi APK tanpa Gradle: `aapt2` + `javac` + `d8` +
 | `AndroidManifest.xml` | Manifest, izin minimal, tema splash |
 | `java/com/ojoltarget/pro/MainActivity.java` | WebView, bridge native, insets, notifikasi |
 | `java/com/ojoltarget/pro/AssetServer.java` | Server aset lokal (loopback) |
+| `java/.../WidgetProvider.java` | Widget layar utama "Siap menerima order" (3 tombol, sinkron dengan app) |
 | `res/` | Ikon adaptif, tema, splash, ikon notifikasi, network security config |
 | `fonts/` | Plus Jakarta Sans + JetBrains Mono (offline) |
 | `prepare-assets.sh` | Menyusun `assets/www` dari `../dist` + font + gambar |
@@ -44,7 +45,7 @@ ditandatangani dengan kunci terpisah; build lokal tidak bisa menimpanya.
 
 ## Spesifikasi
 
-- Package `com.ojoltarget.pro` (v2.1.0, tanpa widget), label OjolTarget Pro
+- Package `com.ojoltarget.pro` (v2.2.0), label OjolTarget Pro
 - minSdk 24, targetSdk 35
 - Izin: `INTERNET`, `ACCESS_NETWORK_STATE`, `POST_NOTIFICATIONS`, `VIBRATE`,
   `WAKE_LOCK`, `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`,

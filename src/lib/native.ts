@@ -7,6 +7,12 @@ interface NativeBridge {
   openAppSettings?: () => void;
   setKeepScreenOn?: (on: string) => void;
   setChrome?: (bgHex: string, lightBars: string) => void;
+  permissionStatus?: () => string;
+  requestNotifications?: () => void;
+  requestBatteryOptimizationExemption?: () => void;
+  requestStorage?: () => void;
+  updateWidget?: (json: string) => void;
+  consumeWidgetAction?: () => string;
 }
 
 function bridge(): NativeBridge | null {
@@ -116,5 +122,109 @@ export function bagikanTeks(text: string): void {
     else if (navigator.share) void navigator.share({ text });
   } catch {
     /* abaikan */
+  }
+}
+
+// ---------- Izin ----------
+
+export interface IzinStatus {
+  location: boolean;
+  notifications: boolean;
+  battery: boolean; // true = sudah dikecualikan dari penghematan baterai
+  storage: boolean;
+}
+
+let lokasiBrowserOk = false;
+
+export function izinStatus(): IzinStatus {
+  try {
+    const raw = bridge()?.permissionStatus?.();
+    if (raw) {
+      const j = JSON.parse(raw) as {
+        location?: string;
+        notifications?: string;
+        storage?: string;
+        batteryOptimized?: boolean;
+      };
+      return {
+        location: j.location === 'granted',
+        notifications: j.notifications === 'granted',
+        battery: j.batteryOptimized === false,
+        storage: j.storage === 'granted',
+      };
+    }
+  } catch {
+    /* jatuh ke nilai bawaan */
+  }
+  // Di browser biasa (pengujian): hanya lokasi yang bisa diminta.
+  return { location: lokasiBrowserOk, notifications: true, battery: true, storage: true };
+}
+
+export function mintaIzin(jenis: keyof IzinStatus): void {
+  try {
+    const b = bridge();
+    if (!b) {
+      if (jenis === 'location' && navigator.geolocation) {
+        const selesai = (ok: boolean) => {
+          lokasiBrowserOk = ok;
+          notifIzinBerubah();
+        };
+        navigator.geolocation.getCurrentPosition(() => selesai(true), () => selesai(false), { timeout: 8000 });
+      }
+      return;
+    }
+    if (jenis === 'location') b.requestLocation?.();
+    else if (jenis === 'notifications') b.requestNotifications?.();
+    else if (jenis === 'battery') b.requestBatteryOptimizationExemption?.();
+    else b.requestStorage?.();
+  } catch {
+    /* abaikan */
+  }
+}
+
+type Pendengar = () => void;
+const pendengar = new Set<Pendengar>();
+
+function notifIzinBerubah(): void {
+  pendengar.forEach((f) => f());
+}
+
+/** Dipanggil native setiap kali dialog izin / layar setelan ditutup. */
+export function dengarIzin(f: Pendengar): () => void {
+  pendengar.add(f);
+  (window as unknown as { __ojolPermsChanged?: () => void }).__ojolPermsChanged = notifIzinBerubah;
+  return () => {
+    pendengar.delete(f);
+  };
+}
+
+// ---------- Widget layar utama ----------
+
+export interface WidgetSnapshot {
+  terdaftar: boolean;
+  fase: 'idle' | 'jemput' | 'antar';
+  platform: string;
+  nama: string;
+  waktuDapat: number;
+  hari: string; // yyyy-mm-dd perangkat saat snapshot dibuat
+  orderHariIni: number;
+  rpHariIni: number;
+  target: number;
+}
+
+export function kirimWidget(snap: WidgetSnapshot): void {
+  try {
+    bridge()?.updateWidget?.(JSON.stringify(snap));
+  } catch {
+    /* abaikan */
+  }
+}
+
+export function ambilAksiWidget(): string | null {
+  try {
+    const a = bridge()?.consumeWidgetAction?.();
+    return a ? a : null;
+  } catch {
+    return null;
   }
 }

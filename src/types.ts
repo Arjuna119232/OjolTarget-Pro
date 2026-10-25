@@ -58,6 +58,7 @@ export interface OrderRecord {
   kmKeJemput?: number;
   kmKeAntar?: number;
   kmTotalTrip?: number;
+  tambahan?: number; // hasil tambahan (Rp): tip, bonus, dll.
   catatan?: string;
   manual?: boolean; // dicatat manual (tanpa alur 3 tombol)
   nomorOrder?: string;
@@ -86,11 +87,22 @@ export interface SpotData {
 export type Tema = 'gelap' | 'terang' | 'sistem';
 export type LapisPeta = 'gelap' | 'standar';
 
-export interface Settings {
+/** Data akun: diisi sekali saat daftar, hanya bisa diubah di Setelan > Akun. */
+export interface Akun {
   nama: string;
   platform: Platform;
+  lencana: string; // lencana / level akun
+  hariOnbid: number; // hari onbid per minggu
+  jamOnline: number; // jam online per hari
+  targetHarian: number; // target penghasilan per hari (Rp)
+  dibuat: number;
+}
+
+export interface Settings {
+  akun: Akun | null;
   tema: Tema;
-  peta: LapisPeta;
+  izinSelesai: boolean; // pop up izin sudah ditampilkan
+  introSelesai: boolean; // onboarding 3 halaman sudah selesai
 }
 
 export type Tab = 'order' | 'maps' | 'riwayat' | 'setelan';

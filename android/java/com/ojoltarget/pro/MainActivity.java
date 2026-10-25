@@ -205,6 +205,36 @@ public class MainActivity extends Activity {
         } else {
             webView.loadUrl(origin + "/");
         }
+        handleIntent(getIntent());
+    }
+
+    /** Aksi dari widget layar utama yang menunggu dijalankan aplikasi (dapat / jemput / selesai). */
+    private static volatile String pendingWidgetAction = null;
+
+    private void handleIntent(Intent intent) {
+        if (intent == null) {
+            return;
+        }
+        String action = intent.getStringExtra(WidgetProvider.EXTRA_ACTION);
+        if (action != null && !action.isEmpty()) {
+            pendingWidgetAction = action;
+            intent.removeExtra(WidgetProvider.EXTRA_ACTION);
+            evalJs("window.__ojolWidgetAction && window.__ojolWidgetAction()");
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIntent(intent);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Kembali dari dialog izin / layar setelan: segarkan status izin di aplikasi.
+        evalJs("window.__ojolPermsChanged && window.__ojolPermsChanged()");
     }
 
     private void createNotificationChannel() {
@@ -396,6 +426,14 @@ public class MainActivity extends Activity {
         return "granted";
     }
 
+    private String locationPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return "granted";
+        }
+        return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                ? "granted" : "prompt";
+    }
+
     private String storagePermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             return "granted";
@@ -451,6 +489,7 @@ public class MainActivity extends Activity {
         public String permissionStatus() {
             try {
                 JSONObject status = new JSONObject();
+                status.put("location", locationPermission());
                 status.put("notifications", notificationsPermission());
                 status.put("storage", storagePermission());
                 status.put("batteryOptimized", isBatteryRestricted());
@@ -570,6 +609,23 @@ public class MainActivity extends Activity {
                 }
             } catch (Exception ignored) {
             }
+        }
+
+        @JavascriptInterface
+        public void updateWidget(String json) {
+            try {
+                getSharedPreferences(WidgetProvider.PREFS, MODE_PRIVATE).edit()
+                        .putString(WidgetProvider.KEY_SNAPSHOT, json).apply();
+                WidgetProvider.refreshAll(getApplicationContext());
+            } catch (Exception ignored) {
+            }
+        }
+
+        @JavascriptInterface
+        public String consumeWidgetAction() {
+            String a = pendingWidgetAction;
+            pendingWidgetAction = null;
+            return a == null ? "" : a;
         }
 
         @JavascriptInterface

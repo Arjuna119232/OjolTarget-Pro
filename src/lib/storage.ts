@@ -1,6 +1,6 @@
 import {
+  Akun,
   ActiveOrder,
-  LapisPeta,
   OrderRecord,
   PLATFORMS,
   Platform,
@@ -9,7 +9,7 @@ import {
   STORAGE_KEYS,
   Tema,
 } from '../types';
-import { formatJam, pad2 } from './format';
+import { formatJam, pad2, totalOrder } from './format';
 
 /** Awalan lama dipertahankan agar data order & titik dari versi sebelumnya tetap terbaca. */
 const PREFIX = 'ojol_target_';
@@ -104,36 +104,58 @@ export function saveActive(a: ActiveOrder | null): void {
   else hapus(STORAGE_KEYS.ACTIVE_ORDER);
 }
 
-// ---------- Setelan ----------
+// ---------- Setelan & akun ----------
 
-export const DEFAULT_SETTINGS: Settings = { nama: '', platform: 'Grab', tema: 'gelap', peta: 'gelap' };
+export const DEFAULT_SETTINGS: Settings = { akun: null, tema: 'gelap', izinSelesai: false, introSelesai: false };
 
-export function loadSettings(): Settings {
-  const s = baca<Partial<Settings> | null>(STORAGE_KEYS.SETTINGS, null);
-  if (s && typeof s === 'object') return normalSettings(s);
-
-  // Migrasi dari versi lama (profil + setelan v3).
-  const lama = baca<{ platform?: unknown } | null>(STORAGE_KEYS.OLD_SETTINGS, null);
-  const profil = baca<{ nama?: unknown; primaryPlatform?: unknown } | null>(STORAGE_KEYS.OLD_PROFILE, null);
-  return normalSettings({
-    nama: typeof profil?.nama === 'string' ? profil.nama : '',
-    platform: platformValid(profil?.primaryPlatform ?? lama?.platform),
-  });
+function akunValid(a: unknown): Akun | null {
+  if (!a || typeof a !== 'object') return null;
+  const r = a as Partial<Akun>;
+  if (typeof r.nama !== 'string' || !r.nama.trim()) return null;
+  if (typeof r.lencana !== 'string' || !r.lencana.trim()) return null;
+  if (!num(r.hariOnbid) || !num(r.jamOnline) || !num(r.targetHarian) || r.targetHarian <= 0) return null;
+  return {
+    nama: r.nama.trim().slice(0, 40),
+    platform: platformValid(r.platform),
+    lencana: r.lencana.trim().slice(0, 30),
+    hariOnbid: Math.min(7, Math.max(1, Math.round(r.hariOnbid))),
+    jamOnline: Math.min(24, Math.max(0.5, r.jamOnline)),
+    targetHarian: Math.round(r.targetHarian),
+    dibuat: num(r.dibuat) ? r.dibuat : Date.now(),
+  };
 }
 
 function normalSettings(s: Partial<Settings>): Settings {
   const tema: Tema = s.tema === 'terang' || s.tema === 'sistem' ? s.tema : 'gelap';
-  const peta: LapisPeta = s.peta === 'standar' ? 'standar' : 'gelap';
   return {
-    nama: typeof s.nama === 'string' ? s.nama.slice(0, 40) : '',
-    platform: platformValid(s.platform),
+    akun: akunValid(s.akun),
     tema,
-    peta,
+    izinSelesai: s.izinSelesai === true,
+    introSelesai: s.introSelesai === true,
   };
+}
+
+export function loadSettings(): Settings {
+  const s = baca<Partial<Settings> | null>(STORAGE_KEYS.SETTINGS, null);
+  return s && typeof s === 'object' ? normalSettings(s) : { ...DEFAULT_SETTINGS };
 }
 
 export function saveSettings(s: Settings): void {
   tulis(STORAGE_KEYS.SETTINGS, s);
+}
+
+/** Nama & platform dari versi lama, hanya untuk mengisi awal formulir daftar. */
+export function loadLegacy(): { nama: string; platform: Platform } | null {
+  const baru = baca<{ nama?: unknown; platform?: unknown } | null>(STORAGE_KEYS.SETTINGS, null);
+  const profil = baca<{ nama?: unknown; primaryPlatform?: unknown } | null>(STORAGE_KEYS.OLD_PROFILE, null);
+  const nama =
+    typeof baru?.nama === 'string' && baru.nama
+      ? baru.nama
+      : typeof profil?.nama === 'string'
+      ? profil.nama
+      : '';
+  if (!nama) return null;
+  return { nama, platform: platformValid(baru?.platform ?? profil?.primaryPlatform) };
 }
 
 // ---------- Cadangan ----------
@@ -178,7 +200,9 @@ export function ordersToCSV(orders: OrderRecord[]): string {
     'Tanggal',
     'Jam',
     'Platform',
-    'Pendapatan (Rp)',
+    'Pendapatan order (Rp)',
+    'Hasil tambahan (Rp)',
+    'Total (Rp)',
     'KM ke jemput',
     'KM jemput-antar',
     'Total KM',
@@ -197,6 +221,8 @@ export function ordersToCSV(orders: OrderRecord[]): string {
         formatJam(o.timestamp),
         o.platform,
         o.nominal,
+        o.tambahan ?? '',
+        totalOrder(o),
         o.kmKeJemput ?? '',
         o.kmKeAntar ?? '',
         o.kmTotalTrip ?? '',

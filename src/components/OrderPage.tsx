@@ -1,16 +1,32 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActiveOrder, KmSource, OrderRecord, Place, Platform, PLATFORMS } from '../types';
+import { Akun, ActiveOrder, KmSource, OrderRecord, Place } from '../types';
 import { getFix } from '../lib/geo';
 import { estimasiKm, jarakRute } from '../lib/route';
 import { cariNama } from '../lib/geocode';
-import { formatDurasi, formatJam, formatKm, formatRupiah, round1, startOfDay, uid } from '../lib/format';
+import {
+  formatDurasi,
+  formatHariTanggal,
+  formatJam,
+  formatKm,
+  formatRupiah,
+  round1,
+  startOfDay,
+  totalOrder,
+  uid,
+} from '../lib/format';
 import { vibrate } from '../lib/native';
 import { Icon } from './Icons';
 import { OrderFormValue, OrderSheet } from './OrderSheet';
 
+export interface AksiWidget {
+  id: 'dapat' | 'jemput' | 'selesai';
+  n: number;
+}
+
 interface Props {
-  platform: Platform;
-  onPlatform: (p: Platform) => void;
+  akun: Akun;
+  aksi: AksiWidget | null;
+  onAksiDone: () => void;
   active: ActiveOrder | null;
   setActive: (fn: (prev: ActiveOrder | null) => ActiveOrder | null) => void;
   orders: OrderRecord[];
@@ -45,8 +61,9 @@ function SrcBadge({ src }: { src?: KmSource }) {
 }
 
 export function OrderPage({
-  platform,
-  onPlatform,
+  akun,
+  aksi,
+  onAksiDone,
   active,
   setActive,
   orders,
@@ -58,6 +75,7 @@ export function OrderPage({
   const [acc, setAcc] = useState<number | null>(null);
   const [sheet, setSheet] = useState(false);
   const [konfirmBatal, setKonfirmBatal] = useState(false);
+  const platform = akun.platform;
   const now = useNow(!!active);
   const aktifRef = useRef(active);
   aktifRef.current = active;
@@ -123,6 +141,7 @@ export function OrderPage({
   // ---- 1. DAPAT ORDERAN ----
   const dapatOrder = async () => {
     if (busy || active) return;
+    setKonfirmBatal(false);
     setBusy('dapat');
     vibrate(25);
     const { place, pesan } = await kunciPosisi();
@@ -158,6 +177,7 @@ export function OrderPage({
   const sudahJemput = async () => {
     const a = aktifRef.current;
     if (busy || !a || a.phase !== 'menuju-jemput') return;
+    setKonfirmBatal(false);
     setBusy('jemput');
     vibrate(25);
     const { place, pesan } = await kunciPosisi();
@@ -215,6 +235,16 @@ export function OrderPage({
     toast('Order dibatalkan.');
   };
 
+  // Aksi dari widget layar utama: dijalankan sekali, hanya bila masih baru.
+  useEffect(() => {
+    if (!aksi) return;
+    onAksiDone();
+    if (Date.now() - aksi.n > 120000) return;
+    if (aksi.id === 'dapat') void dapatOrder();
+    else if (aksi.id === 'jemput') void sudahJemput();
+    else void orderSelesai();
+  }, [aksi]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const simpan = (v: OrderFormValue) => {
     const a = aktifRef.current;
     if (!a) return;
@@ -225,7 +255,8 @@ export function OrderPage({
   // ---- Ringkasan hari ini ----
   const mulai = startOfDay(Date.now());
   const hariIni = orders.filter((o) => o.timestamp >= mulai);
-  const totalRp = hariIni.reduce((s, o) => s + (o.nominal || 0), 0);
+  const totalRp = hariIni.reduce((s, o) => s + totalOrder(o), 0);
+  const pct = akun.targetHarian > 0 ? Math.min(100, Math.round((totalRp / akun.targetHarian) * 100)) : 0;
   const totalKm = round1(hariIni.reduce((s, o) => s + (o.kmTotalTrip || 0), 0));
 
   const phase = active?.phase;
@@ -233,6 +264,22 @@ export function OrderPage({
 
   return (
     <div className="page">
+      <section className="card target" aria-label="Target hari ini">
+        <div className="target-head">
+          <span>
+            Target hari ini <small>{formatHariTanggal(Date.now())}</small>
+          </span>
+          <strong>{pct}%</strong>
+        </div>
+        <div className="bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+          <span style={{ width: `${pct}%` }} />
+        </div>
+        <p className="muted small">
+          {formatRupiah(totalRp)} dari {formatRupiah(akun.targetHarian)} · {akun.lencana} · online{' '}
+          {String(akun.jamOnline).replace('.', ',')} jam/hari · {akun.hariOnbid} hari/minggu
+        </p>
+      </section>
+
       <section className="stats" aria-label="Ringkasan hari ini">
         <div className="stat">
           <span className="stat-label">Order</span>
@@ -261,18 +308,7 @@ export function OrderPage({
         {!active && (
           <>
             <p className="flow-title">Siap menerima order</p>
-            <div className="chips" role="group" aria-label="Platform">
-              {PLATFORMS.map((pl) => (
-                <button
-                  key={pl}
-                  type="button"
-                  className={`chip ${platform === pl ? 'on' : ''}`}
-                  onClick={() => onPlatform(pl)}
-                >
-                  {pl}
-                </button>
-              ))}
-            </div>
+            <p className="muted">Platform: {platform}</p>
             <button
               type="button"
               className="cta cta-green"
@@ -368,20 +404,22 @@ export function OrderPage({
                   Buka form pendapatan
                 </button>
               )}
-              {konfirmBatal ? (
-                <>
-                  <button type="button" className="btn btn-danger" onClick={batalkan}>
-                    Ya, batalkan
+              {/* Batalkan hanya ada setelah "Dapat orderan" dan hilang begitu "Sudah jemput" ditekan. */}
+              {phase === 'menuju-jemput' &&
+                (konfirmBatal ? (
+                  <>
+                    <button type="button" className="btn btn-danger" onClick={batalkan}>
+                      Ya, batalkan
+                    </button>
+                    <button type="button" className="btn btn-ghost" onClick={() => setKonfirmBatal(false)}>
+                      Tidak
+                    </button>
+                  </>
+                ) : (
+                  <button type="button" className="btn btn-ghost" onClick={() => setKonfirmBatal(true)}>
+                    Batalkan order
                   </button>
-                  <button type="button" className="btn btn-ghost" onClick={() => setKonfirmBatal(false)}>
-                    Tidak
-                  </button>
-                </>
-              ) : (
-                <button type="button" className="btn btn-ghost" onClick={() => setKonfirmBatal(true)}>
-                  Batalkan order
-                </button>
-              )}
+                ))}
             </div>
           </>
         )}
@@ -402,7 +440,6 @@ export function OrderPage({
         <OrderSheet
           judul="Order selesai"
           simpanLabel="Simpan order"
-          platform={active.platform}
           kmJemput={active.kmJemput}
           kmAntar={active.kmAntar}
           kmJemputSrc={active.kmJemputSrc}

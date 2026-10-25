@@ -19,9 +19,39 @@ export type IconName =
   | 'clock'
   | 'route'
   | 'back'
-  | 'share';
+  | 'share'
+  | 'bell'
+  | 'battery'
+  | 'folder'
+  | 'user'
+  | 'shield';
 
 const PATHS: Record<IconName, React.ReactNode> = {
+  bell: (
+    <>
+      <path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z" />
+      <path d="M10 21h4" />
+    </>
+  ),
+  battery: (
+    <>
+      <rect x="3" y="8" width="16" height="9" rx="2" />
+      <path d="M21 11v3M7 11v3" />
+    </>
+  ),
+  folder: <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,
+  user: (
+    <>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-4 3.5-6 8-6s8 2 8 6" />
+    </>
+  ),
+  shield: (
+    <>
+      <path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z" />
+      <path d="m9 12 2 2 4-4" />
+    </>
+  ),
   order: (
     <>
       <circle cx="12" cy="12" r="9" />

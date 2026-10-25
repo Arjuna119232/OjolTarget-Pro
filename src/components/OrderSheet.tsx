@@ -1,62 +1,84 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { KmSource, PLATFORMS, Platform } from '../types';
-import { formatDigits, formatKm, parseDecimal, round1 } from '../lib/format';
+import { KmSource } from '../types';
+import { formatDigits, formatKm, formatRupiah, parseDecimal, round1 } from '../lib/format';
 import { Icon } from './Icons';
 
 export interface OrderFormValue {
-  nominal: number;
+  nominal: number; // pendapatan order (manual)
+  tambahan: number; // hasil tambahan Rp (manual, opsional)
   kmJemput?: number;
   kmAntar?: number;
-  platform: Platform;
   catatan: string;
 }
 
 interface Props {
   judul: string;
-  /** Ringkasan rute (khusus order selesai). */
+  /** Ringkasan rute. */
   ringkasan?: React.ReactNode;
   simpanLabel: string;
-  platform: Platform;
   nominalAwal?: number;
+  tambahanAwal?: number;
   kmJemput?: number;
   kmAntar?: number;
   kmJemputSrc?: KmSource;
   kmAntarSrc?: KmSource;
   catatan?: string;
-  /** Mode total saja (catat manual): satu kolom KM total. */
   onSave: (v: OrderFormValue) => void;
   onClose: () => void;
   onDelete?: () => void;
 }
 
+const SRC_LABEL: Record<KmSource, string> = {
+  rute: 'otomatis dari rute jalan',
+  estimasi: 'otomatis (estimasi offline)',
+  manual: 'diisi manual',
+};
+
 function kmText(v?: number): string {
   return v === undefined || !isFinite(v) ? '' : String(v).replace('.', ',');
 }
 
-const SRC_LABEL: Record<KmSource, string> = {
-  rute: 'dari rute jalan',
-  estimasi: 'estimasi (offline)',
-  manual: 'diisi manual',
-};
+/** Jarak otomatis (hanya tampil). Bila GPS gagal, kolom jadi bisa diisi sebagai cadangan. */
+function KmField(p: {
+  label: string;
+  auto?: number;
+  src?: KmSource;
+  teks: string;
+  setTeks: (s: string) => void;
+}) {
+  const otomatis = p.auto !== undefined && isFinite(p.auto);
+  return (
+    <div className="field">
+      <span className="field-label">{p.label}</span>
+      {otomatis ? (
+        <div className="input input-readonly" aria-readonly="true">
+          {formatKm(p.auto)}
+        </div>
+      ) : (
+        <input
+          className="input"
+          inputMode="decimal"
+          autoComplete="off"
+          placeholder="0,0"
+          value={p.teks}
+          onChange={(e) => p.setTeks(e.target.value.replace(/[^\d.,]/g, ''))}
+        />
+      )}
+      <span className="field-hint">
+        {otomatis ? (p.src ? SRC_LABEL[p.src] : 'otomatis') : 'GPS tidak tersedia, isi jarak manual'}
+      </span>
+    </div>
+  );
+}
 
 export function OrderSheet(p: Props) {
   const [digits, setDigits] = useState(p.nominalAwal ? String(p.nominalAwal) : '');
+  const [tambah, setTambah] = useState(p.tambahanAwal ? String(p.tambahanAwal) : '');
   const [kmJ, setKmJ] = useState(kmText(p.kmJemput));
   const [kmA, setKmA] = useState(kmText(p.kmAntar));
-  const [dirtyJ, setDirtyJ] = useState(false);
-  const [dirtyA, setDirtyA] = useState(false);
-  const [platform, setPlatform] = useState<Platform>(p.platform);
   const [catatan, setCatatan] = useState(p.catatan ?? '');
   const [hapusYakin, setHapusYakin] = useState(false);
   const nomRef = useRef<HTMLInputElement>(null);
-
-  // Hasil rute jalan bisa datang setelah sheet terbuka; perbarui selama belum diubah manual.
-  useEffect(() => {
-    if (!dirtyJ) setKmJ(kmText(p.kmJemput));
-  }, [p.kmJemput, dirtyJ]);
-  useEffect(() => {
-    if (!dirtyA) setKmA(kmText(p.kmAntar));
-  }, [p.kmAntar, dirtyA]);
 
   useEffect(() => {
     const t = setTimeout(() => nomRef.current?.focus(), 250);
@@ -64,13 +86,11 @@ export function OrderSheet(p: Props) {
   }, []);
 
   const nominal = Number(digits) || 0;
-  const j = parseDecimal(kmJ);
-  const a = parseDecimal(kmA);
+  const tambahan = Number(tambah) || 0;
+  const j = p.kmJemput !== undefined ? p.kmJemput : parseDecimal(kmJ);
+  const a = p.kmAntar !== undefined ? p.kmAntar : parseDecimal(kmA);
   const total = round1((j ?? 0) + (a ?? 0));
   const bisaSimpan = nominal > 0;
-
-  const srcJ: KmSource | undefined = dirtyJ ? 'manual' : p.kmJemputSrc;
-  const srcA: KmSource | undefined = dirtyA ? 'manual' : p.kmAntarSrc;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,8 +98,11 @@ export function OrderSheet(p: Props) {
       nomRef.current?.focus();
       return;
     }
-    p.onSave({ nominal, kmJemput: j, kmAntar: a, platform, catatan: catatan.trim() });
+    p.onSave({ nominal, tambahan, kmJemput: j, kmAntar: a, catatan: catatan.trim() });
   };
+
+  const fokus = (e: React.FocusEvent<HTMLElement>) =>
+    e.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
 
   return (
     <div className="sheet-backdrop" onClick={p.onClose}>
@@ -114,43 +137,15 @@ export function OrderSheet(p: Props) {
                 placeholder="0"
                 value={formatDigits(digits)}
                 onChange={(e) => setDigits(e.target.value.replace(/\D/g, '').slice(0, 9))}
-                onFocus={(e) => e.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' })}
+                onFocus={fokus}
               />
             </div>
             <span className="field-hint">Isi sendiri sesuai yang Anda terima dari aplikasi.</span>
           </label>
 
           <div className="grid2">
-            <label className="field">
-              <span className="field-label">KM ke jemput</span>
-              <input
-                className="input"
-                inputMode="decimal"
-                autoComplete="off"
-                placeholder="0,0"
-                value={kmJ}
-                onChange={(e) => {
-                  setDirtyJ(true);
-                  setKmJ(e.target.value.replace(/[^\d.,]/g, ''));
-                }}
-              />
-              <span className="field-hint">{srcJ ? SRC_LABEL[srcJ] : 'isi manual'}</span>
-            </label>
-            <label className="field">
-              <span className="field-label">KM jemput → antar</span>
-              <input
-                className="input"
-                inputMode="decimal"
-                autoComplete="off"
-                placeholder="0,0"
-                value={kmA}
-                onChange={(e) => {
-                  setDirtyA(true);
-                  setKmA(e.target.value.replace(/[^\d.,]/g, ''));
-                }}
-              />
-              <span className="field-hint">{srcA ? SRC_LABEL[srcA] : 'isi manual'}</span>
-            </label>
+            <KmField label="KM ke jemput" auto={p.kmJemput} src={p.kmJemputSrc} teks={kmJ} setTeks={setKmJ} />
+            <KmField label="KM jemput → antar" auto={p.kmAntar} src={p.kmAntarSrc} teks={kmA} setTeks={setKmA} />
           </div>
 
           <div className="total-row">
@@ -158,21 +153,22 @@ export function OrderSheet(p: Props) {
             <strong>{formatKm(total)}</strong>
           </div>
 
-          <div className="field">
-            <span className="field-label">Platform</span>
-            <div className="chips">
-              {PLATFORMS.map((pl) => (
-                <button
-                  type="button"
-                  key={pl}
-                  className={`chip ${platform === pl ? 'on' : ''}`}
-                  onClick={() => setPlatform(pl)}
-                >
-                  {pl}
-                </button>
-              ))}
+          <label className="field">
+            <span className="field-label">Hasil tambahan Rp</span>
+            <div className="money">
+              <span className="money-prefix">Rp</span>
+              <input
+                className="input input-money input-money-sm"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="0"
+                value={formatDigits(tambah)}
+                onChange={(e) => setTambah(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                onFocus={fokus}
+              />
             </div>
-          </div>
+            <span className="field-hint">Opsional: tip, bonus, dan sejenisnya.</span>
+          </label>
 
           <label className="field">
             <span className="field-label">Catatan (opsional)</span>
@@ -180,10 +176,16 @@ export function OrderSheet(p: Props) {
               className="input"
               value={catatan}
               maxLength={120}
-              placeholder="Contoh: tip, tol, parkir"
+              placeholder="Contoh: parkir, tol"
               onChange={(e) => setCatatan(e.target.value)}
+              onFocus={fokus}
             />
           </label>
+
+          <div className="total-row total-row-strong">
+            <span>Total pendapatan</span>
+            <strong>{formatRupiah(nominal + tambahan)}</strong>
+          </div>
         </div>
 
         <div className="sheet-foot">

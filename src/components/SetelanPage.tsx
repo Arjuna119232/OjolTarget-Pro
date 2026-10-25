@@ -1,22 +1,50 @@
-import React, { useState } from 'react';
-import { OrderRecord, PLATFORMS, Settings, SpotData } from '../types';
+import React, { useEffect, useState } from 'react';
+import { Akun, OrderRecord, Settings, SpotData } from '../types';
 import { exportJSON, parseImport, ImporHasil } from '../lib/storage';
-import { openAppSettings, requestLocationPermission, simpanFile } from '../lib/native';
+import { IzinStatus, izinStatus, openAppSettings, simpanFile, dengarIzin } from '../lib/native';
+import { formatRupiah } from '../lib/format';
+import { useBackClose } from '../lib/backclose';
 import { Icon } from './Icons';
+import { AkunForm } from './AkunForm';
+import { IzinModal } from './IzinModal';
 
 interface Props {
   settings: Settings;
+  akun: Akun;
   orders: OrderRecord[];
   spots: SpotData[];
   onSettings: (s: Settings) => void;
+  onAkun: (a: Akun) => void;
   onImport: (h: ImporHasil) => void;
   onReset: () => void;
   toast: (msg: string) => void;
 }
 
-export function SetelanPage({ settings, orders, spots, onSettings, onImport, onReset, toast }: Props) {
+const NAMA_IZIN: Array<[keyof IzinStatus, string]> = [
+  ['location', 'Lokasi'],
+  ['notifications', 'Notifikasi'],
+  ['battery', 'Tanpa penghemat baterai'],
+];
+
+export function SetelanPage({ settings, akun, orders, spots, onSettings, onAkun, onImport, onReset, toast }: Props) {
   const [teks, setTeks] = useState('');
   const [konfirmReset, setKonfirmReset] = useState(false);
+  const [ubahAkun, setUbahAkun] = useState(false);
+  const [izinBuka, setIzinBuka] = useState(false);
+  const [izin, setIzin] = useState<IzinStatus>(() => izinStatus());
+
+  useBackClose(ubahAkun, () => setUbahAkun(false));
+  useBackClose(izinBuka, () => setIzinBuka(false));
+
+  useEffect(() => {
+    const segarkan = () => setIzin(izinStatus());
+    const lepas = dengarIzin(segarkan);
+    document.addEventListener('visibilitychange', segarkan);
+    return () => {
+      lepas();
+      document.removeEventListener('visibilitychange', segarkan);
+    };
+  }, []);
 
   const cadangkan = () => {
     const nama = `OjolTarget-Cadangan-${new Date().toISOString().slice(0, 10)}.json`;
@@ -38,32 +66,23 @@ export function SetelanPage({ settings, orders, spots, onSettings, onImport, onR
   return (
     <div className="page">
       <section className="card">
-        <h3 className="card-title">Profil</h3>
-        <label className="field">
-          <span className="field-label">Nama</span>
-          <input
-            className="input"
-            value={settings.nama}
-            maxLength={40}
-            placeholder="Nama Anda"
-            onChange={(e) => onSettings({ ...settings, nama: e.target.value })}
-          />
-        </label>
-        <div className="field">
-          <span className="field-label">Platform utama</span>
-          <div className="chips">
-            {PLATFORMS.map((p) => (
-              <button
-                key={p}
-                type="button"
-                className={`chip ${settings.platform === p ? 'on' : ''}`}
-                onClick={() => onSettings({ ...settings, platform: p })}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-        </div>
+        <h3 className="card-title">Akun</h3>
+        <button type="button" className="akun-card" onClick={() => setUbahAkun(true)} aria-label="Ubah akun">
+          <span className="akun-avatar">
+            <Icon name="user" size={26} />
+          </span>
+          <span className="akun-info">
+            <strong>{akun.nama}</strong>
+            <small>
+              {akun.platform} · {akun.lencana}
+            </small>
+            <small>
+              {akun.hariOnbid} hari onbid/minggu · {String(akun.jamOnline).replace('.', ',')} jam online/hari
+            </small>
+            <small>Target {formatRupiah(akun.targetHarian)} per hari</small>
+          </span>
+          <span className="akun-go">Ubah</span>
+        </button>
       </section>
 
       <section className="card">
@@ -89,41 +108,22 @@ export function SetelanPage({ settings, orders, spots, onSettings, onImport, onR
             ))}
           </div>
         </div>
-        <div className="field">
-          <span className="field-label">Gaya peta</span>
-          <div className="chips">
-            {(
-              [
-                ['gelap', 'Gelap'],
-                ['standar', 'Standar'],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                className={`chip ${settings.peta === id ? 'on' : ''}`}
-                onClick={() => onSettings({ ...settings, peta: id })}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
       </section>
 
       <section className="card">
-        <h3 className="card-title">Izin lokasi</h3>
-        <p className="muted">GPS dipakai untuk menghitung jarak dan mengisi Maps Gacor.</p>
+        <h3 className="card-title">Izin aplikasi</h3>
+        <ul className="izin-ringkas">
+          {NAMA_IZIN.map(([k, nama]) => (
+            <li key={k} className={izin[k] ? 'ok' : ''}>
+              <Icon name={izin[k] ? 'check' : 'x'} size={16} strokeWidth={3} />
+              <span>{nama}</span>
+              <small>{izin[k] ? 'Diizinkan' : 'Belum'}</small>
+            </li>
+          ))}
+        </ul>
         <div className="row-actions">
-          <button
-            type="button"
-            className="btn btn-ghost grow"
-            onClick={() => {
-              requestLocationPermission();
-              toast('Permintaan izin lokasi dikirim.');
-            }}
-          >
-            <Icon name="locate" size={18} /> Minta izin
+          <button type="button" className="btn btn-ghost grow" onClick={() => setIzinBuka(true)}>
+            <Icon name="shield" size={18} /> Atur izin
           </button>
           <button type="button" className="btn btn-ghost grow" onClick={openAppSettings}>
             <Icon name="settings" size={18} /> Setelan Android
@@ -133,7 +133,10 @@ export function SetelanPage({ settings, orders, spots, onSettings, onImport, onR
 
       <section className="card">
         <h3 className="card-title">
-          Data <small>{orders.length} order · {spots.length} titik</small>
+          Data{' '}
+          <small>
+            {orders.length} order · {spots.length} titik
+          </small>
         </h3>
         <button type="button" className="btn btn-ghost btn-block" onClick={cadangkan}>
           <Icon name="download" size={18} /> Simpan cadangan (JSON)
@@ -177,8 +180,43 @@ export function SetelanPage({ settings, orders, spots, onSettings, onImport, onR
       </section>
 
       <p className="muted small center">
-        OjolTarget Pro 2.1.0 · data tersimpan di perangkat ini. Peta: OpenStreetMap/CARTO. Jarak rute: OSRM.
+        OjolTarget Pro 2.2.0 · data tersimpan di perangkat ini. Peta: OpenStreetMap/CARTO. Jarak rute: OSRM.
       </p>
+
+      {ubahAkun && (
+        <div className="sheet-backdrop" onClick={() => setUbahAkun(false)}>
+          <div className="sheet" role="dialog" aria-modal="true" aria-label="Ubah akun" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-grip" />
+            <div className="sheet-head">
+              <h2>Ubah akun</h2>
+              <button type="button" className="icon-btn" aria-label="Tutup" onClick={() => setUbahAkun(false)}>
+                <Icon name="x" />
+              </button>
+            </div>
+            <div className="sheet-body">
+              <AkunForm
+                awal={akun}
+                simpanLabel="Simpan akun"
+                onSave={(a) => {
+                  onAkun(a);
+                  setUbahAkun(false);
+                  toast('Akun diperbarui.');
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {izinBuka && (
+        <IzinModal
+          ulang
+          onSelesai={() => {
+            setIzinBuka(false);
+            setIzin(izinStatus());
+          }}
+        />
+      )}
     </div>
   );
 }

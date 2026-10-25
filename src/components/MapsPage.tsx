@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Fix, LapisPeta, SpotData, SpotTipe } from '../types';
+import { Fix, SpotData, SpotTipe } from '../types';
 import { Cell, FilterSpot, Periode, gabungkan, saring } from '../lib/spots';
 import { getFix } from '../lib/geo';
 import { formatRupiah, formatTanggal, pad2 } from '../lib/format';
@@ -9,8 +9,6 @@ import { MapHandle, SlippyMap } from './SlippyMap';
 
 interface Props {
   spots: SpotData[];
-  peta: LapisPeta;
-  onPeta: (p: LapisPeta) => void;
 }
 
 const PERIODE: Array<{ id: Periode; label: string }> = [
@@ -30,7 +28,7 @@ function jamRentang(h: number): string {
   return `${pad2(h)}:00-${pad2((h + 1) % 24)}:00`;
 }
 
-export function MapsPage({ spots, peta, onPeta }: Props) {
+export function MapsPage({ spots }: Props) {
   const [filter, setFilter] = useState<FilterSpot>({ periode: '30', tipe: 'Spot Gacor', jamIni: false });
   const [selKey, setSelKey] = useState<string | null>(null);
   const [user, setUser] = useState<Fix | null>(null);
@@ -133,7 +131,7 @@ export function MapsPage({ spots, peta, onPeta }: Props) {
       <div className="map-wrap">
         <SlippyMap
           ref={mapRef}
-          layer={peta}
+          layer="gelap"
           cells={cells}
           selectedKey={selKey}
           user={user}
@@ -164,14 +162,6 @@ export function MapsPage({ spots, peta, onPeta }: Props) {
             disabled={!cells.length}
           >
             <Icon name="map" />
-          </button>
-          <button
-            type="button"
-            className="map-btn map-btn-text"
-            aria-label="Ganti gaya peta"
-            onClick={() => onPeta(peta === 'gelap' ? 'standar' : 'gelap')}
-          >
-            {peta === 'gelap' ? 'Gelap' : 'Std'}
           </button>
         </div>
 

@@ -1,15 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { OrderRecord, Platform } from '../types';
-import { formatJam, formatKm, formatRupiah, formatTanggal, round1, startOfDay } from '../lib/format';
+import { OrderRecord } from '../types';
+import { formatJam, formatKm, formatRupiah, formatTanggal, round1, startOfDay, totalOrder } from '../lib/format';
 import { ordersToCSV } from '../lib/storage';
 import { simpanFile } from '../lib/native';
+import { useBackClose } from '../lib/backclose';
 import { Icon } from './Icons';
 import { OrderFormValue, OrderSheet } from './OrderSheet';
 
 interface Props {
   orders: OrderRecord[];
-  platform: Platform;
-  onAdd: (v: OrderFormValue) => void;
   onEdit: (id: string, v: OrderFormValue) => void;
   onDelete: (id: string) => void;
   toast: (msg: string) => void;
@@ -17,9 +16,9 @@ interface Props {
 
 type Rentang = 'hari' | '7' | 'semua';
 
-export function RiwayatPage({ orders, platform, onAdd, onEdit, onDelete, toast }: Props) {
+export function RiwayatPage({ orders, onEdit, onDelete, toast }: Props) {
   const [rentang, setRentang] = useState<Rentang>('hari');
-  const [form, setForm] = useState<null | { mode: 'tambah' } | { mode: 'edit'; order: OrderRecord }>(null);
+  const [form, setForm] = useState<null | OrderRecord>(null);
 
   const daftar = useMemo(() => {
     const dari =
@@ -27,7 +26,7 @@ export function RiwayatPage({ orders, platform, onAdd, onEdit, onDelete, toast }
     return orders.filter((o) => o.timestamp >= dari).sort((a, b) => b.timestamp - a.timestamp);
   }, [orders, rentang]);
 
-  const totalRp = daftar.reduce((s, o) => s + (o.nominal || 0), 0);
+  const totalRp = daftar.reduce((s, o) => s + totalOrder(o), 0);
   const totalKm = round1(daftar.reduce((s, o) => s + (o.kmTotalTrip || 0), 0));
   const rpPerKm = totalKm > 0 ? totalRp / totalKm : 0;
 
@@ -51,6 +50,7 @@ export function RiwayatPage({ orders, platform, onAdd, onEdit, onDelete, toast }
   };
 
   const tutup = () => setForm(null);
+  useBackClose(form !== null, tutup);
 
   return (
     <div className="page">
@@ -93,9 +93,6 @@ export function RiwayatPage({ orders, platform, onAdd, onEdit, onDelete, toast }
       </section>
 
       <div className="row-actions">
-        <button type="button" className="btn btn-ghost grow" onClick={() => setForm({ mode: 'tambah' })}>
-          <Icon name="plus" size={18} /> Catat manual
-        </button>
         <button type="button" className="btn btn-ghost grow" onClick={ekspor}>
           <Icon name="download" size={18} /> Ekspor CSV
         </button>
@@ -111,20 +108,21 @@ export function RiwayatPage({ orders, platform, onAdd, onEdit, onDelete, toast }
           <section key={tgl} className="card">
             <h3 className="card-title">
               {tgl}
-              <small>{formatRupiah(items.reduce((s, o) => s + o.nominal, 0))}</small>
+              <small>{formatRupiah(items.reduce((s, o) => s + totalOrder(o), 0))}</small>
             </h3>
             <ul className="orders">
               {items.map((o) => {
                 const nama = [o.titikJemputNama ?? o.namaLokasi, o.titikAntarNama].filter(Boolean).join(' → ');
                 return (
                   <li key={o.id}>
-                    <button type="button" className="order-row" onClick={() => setForm({ mode: 'edit', order: o })}>
+                    <button type="button" className="order-row" onClick={() => setForm(o)}>
                       <span className="order-time">
                         {formatJam(o.timestamp)}
                         <small>{o.platform}</small>
                       </span>
                       <span className="order-main">
-                        <strong>{formatRupiah(o.nominal)}</strong>
+                        <strong>{formatRupiah(totalOrder(o))}</strong>
+                        {!!o.tambahan && <small>termasuk tambahan {formatRupiah(o.tambahan)}</small>}
                         <small>
                           {o.kmTotalTrip
                             ? `${formatKm(o.kmTotalTrip)}${
@@ -145,33 +143,21 @@ export function RiwayatPage({ orders, platform, onAdd, onEdit, onDelete, toast }
         ))
       )}
 
-      {form?.mode === 'tambah' && (
-        <OrderSheet
-          judul="Catat order manual"
-          simpanLabel="Simpan"
-          platform={platform}
-          onSave={(v) => {
-            onAdd(v);
-            tutup();
-          }}
-          onClose={tutup}
-        />
-      )}
-      {form?.mode === 'edit' && (
+      {form && (
         <OrderSheet
           judul="Ubah order"
           simpanLabel="Simpan perubahan"
-          platform={form.order.platform}
-          nominalAwal={form.order.nominal}
-          kmJemput={form.order.kmKeJemput}
-          kmAntar={form.order.kmKeAntar}
-          catatan={form.order.catatan}
+          nominalAwal={form.nominal}
+          tambahanAwal={form.tambahan}
+          kmJemput={form.kmKeJemput}
+          kmAntar={form.kmKeAntar}
+          catatan={form.catatan}
           onSave={(v) => {
-            onEdit(form.order.id, v);
+            onEdit(form.id, v);
             tutup();
           }}
           onDelete={() => {
-            onDelete(form.order.id);
+            onDelete(form.id);
             tutup();
           }}
           onClose={tutup}
